@@ -25,11 +25,40 @@ drop view base_table;
 
 select * from base_table;
 
-select time 
-from base_table 
-where (ten_day_max - openmid) > openlow_spread
-and
+create view bottom_candle as
+select * from (
+	select *, 
+	rank() over(partition by ten_day_max_time order by time)
+	from base_table bt 
+	where entry_bottom 
+	and (ten_day_max - openmid) > openlow_spread
+	order by time 
+) as a
+where rank = 1;
 
+drop view bottom_candle;
+
+select * from bottom_candle;
+
+create view top_candle as
+select * from (
+	select *, 
+	rank() over(partition by ten_day_min order by time)
+	from base_table bt 
+	where entry_top 
+	and (openmid - ten_day_min) > openhigh_spread
+	order by time 
+) as a
+where rank = 1;
+
+drop view top_candle;
+
+select * from top_candle;
+
+select bc.time bottom_candle, bt.time, (bt.lowmid - bt.openmid) as olm, (bt.highmid - bt.openmid) as ohm, (bt.highmid - bt.lowmid),
+(bt.closemid - bt.openmid) as ocm, bt.volume
+from base_table bt, bottom_candle bc
+where bt.time between (bc.time - 3) and (bc.time);
 
 
 
